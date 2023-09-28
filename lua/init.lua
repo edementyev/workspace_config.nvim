@@ -1,5 +1,5 @@
 local ffi = require("ffi")
-local lfs = require("lfs")
+local uv = vim.loop
 
 ffi.cdef([[
  int getuid(void);
@@ -14,16 +14,31 @@ local default_config = {
 local config = {}
 
 local function file_owned_by_me(file)
-	return ffi.C.getuid() == lfs.attributes(file).uid
+	uv.fs_open(file, "r", 438, function(err, fd)
+		assert(not err, err)
+		uv.fs_fstat(fd, function(err, stat)
+			assert(not err, err)
+			uv.fs_close(fd, function(err)
+				assert(not err, err)
+				-- print(ffi.C.getuid(), type(ffi.C.getuid()), stat.uid, type(stat.uid), ffi.C.getuid() == stat.uid)
+				if ffi.C.getuid() == stat.uid then
+          vim.defer_fn(function ()
+            vim.cmd([[luafile ]] .. file)
+            print("loaded " .. file)
+          end, 1)
+				end
+			end)
+		end)
+	end)
 end
 
 local function load_file(path)
 	if file_owned_by_me(path) then
-		vim.cmd([[luafile ]] .. path)
-		print("loaded " .. path)
+		-- vim.cmd([[luafile ]] .. path)
+		-- print("loaded " .. path)
 		return true
 	else
-		print(path .. " exists but is not loaded. Security reason: a diffent owner.")
+		-- print(path .. " exists but is not loaded. Security reason: a diffent owner.")
 	end
 	return false
 end
