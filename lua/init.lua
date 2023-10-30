@@ -22,10 +22,10 @@ local function file_owned_by_me(file)
 				assert(not err, err)
 				-- print(ffi.C.getuid(), type(ffi.C.getuid()), stat.uid, type(stat.uid), ffi.C.getuid() == stat.uid)
 				if ffi.C.getuid() == stat.uid then
-          vim.defer_fn(function ()
-            vim.cmd([[luafile ]] .. file)
-            print("loaded " .. file)
-          end, 1)
+					vim.defer_fn(function()
+						vim.cmd([[luafile ]] .. file)
+						print("loaded " .. file)
+					end, 1)
 				end
 			end)
 		end)
@@ -50,13 +50,13 @@ function M.load(files)
 	for _, file in pairs(files) do
 		local dirpath = cwd .. "/"
 		local filepath
-		while vim.loop.fs_realpath(dirpath) ~= home do
+		while dirpath ~= home and dirpath ~= "/" do
 			filepath = dirpath .. file
 			if vim.loop.fs_stat(filepath) then
 				load_file(filepath)
 				break
 			else
-				dirpath = dirpath .. "../"
+				dirpath = vim.loop.fs_realpath(dirpath .. "../") or "/"
 			end
 		end
 	end
